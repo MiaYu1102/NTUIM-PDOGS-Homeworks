@@ -1,6 +1,4 @@
-#include <climits>
-#include <cmath>
-#include <iostream>
+#include <bits/stdc++.h>
 using namespace std;
 
 
@@ -12,12 +10,8 @@ int getWaitingTime(int currentFloor, int currentDirection,
                    int* innerCallFloors, int* outerCallFloors, int* outerCallDirections, 
 				   int timePerFloor, int timePerDoorCycle);
 
-int getMin(int a, int b);
-int getMax(int a, int b);
 
 int countSum(const int arr[], int n);
-void swap(int &a, int &b);
-void bubbleSort(int* arr, int n);
 
 
 int main() 
@@ -51,8 +45,8 @@ int main()
         innerCall[i] = new int[innCallCnt[i] + 1];
         for (int j = 0; j < innCallCnt[i]; j++) {
             cin >> innerCall[i][j];
-            highestFloor[i] = getMax(highestFloor[i], innerCall[i][j]);
-            lowestFloor[i]  = getMin(lowestFloor[i], innerCall[i][j]);
+            highestFloor[i] = max(highestFloor[i], innerCall[i][j]);
+            lowestFloor[i]  = min(lowestFloor[i], innerCall[i][j]);
         }
     }
 
@@ -70,8 +64,8 @@ int main()
 
         for (int j = 0; j < outCallCnt[i]; j++) {
             cin >> outerCall[i][j] >> outerCallDirections[i][j];
-            highestFloor[i] = getMax(highestFloor[i], outerCall[i][j]);
-            lowestFloor[i]  = getMin(lowestFloor[i], outerCall[i][j]);
+            highestFloor[i] = max(highestFloor[i], outerCall[i][j]);
+            lowestFloor[i]  = min(lowestFloor[i], outerCall[i][j]);
         }
     }
 
@@ -96,7 +90,7 @@ int main()
 										innerCall[i], outerCall[i], outerCallDirections[i],
 				   						timePerFloor, timePerDoorCycle);
 
-            timeRec[i] = getMin(time_up, time_down);
+            timeRec[i] = min(time_up, time_down);
         } else
             timeRec[i] = getWaitingTime(ElevatorFloors[i], ElevatorDirections[i], 
 										highestFloor[i], lowestFloor[i],
@@ -115,8 +109,8 @@ int main()
         // Add the new request to the current outer calls of the elevator
         outerCall[i][outCallCnt[i]]  = newCallFloor;
         outerCallDirections[i][outCallCnt[i]] = newCallDirection;
-        highestFloor[i]           = getMax(highestFloor[i], outerCall[i][outCallCnt[i]]);
-        lowestFloor[i]            = getMin(lowestFloor[i], outerCall[i][outCallCnt[i]]);
+        highestFloor[i]           = max(highestFloor[i], outerCall[i][outCallCnt[i]]);
+        lowestFloor[i]            = min(lowestFloor[i], outerCall[i][outCallCnt[i]]);
 
         int newCallTime;
         if (ElevatorDirections[i] == 0) {
@@ -133,7 +127,7 @@ int main()
 									   innerCall[i], outerCall[i], outerCallDirections[i],
 									   timePerFloor, timePerDoorCycle);
 
-            newCallTime = getMin(time_up, time_down);
+            newCallTime = min(time_up, time_down);
 
         } else {
             newCallTime = getWaitingTime(ElevatorFloors[i], ElevatorDirections[i],
@@ -243,7 +237,7 @@ int getWaitingTime(int currentFloor, int currentDirection,
             }
         }
     }
-    bubbleSort(WaitingTime, innerCallCnt + outerCallCnt);
+    sort(WaitingTime, WaitingTime+(innerCallCnt + outerCallCnt));
     int doorCnt = 0;
     int tempCnt = 0;
     for(int i = 0; i < (innerCallCnt + outerCallCnt); i++){
@@ -263,19 +257,6 @@ int getWaitingTime(int currentFloor, int currentDirection,
     return WaitingTimes * timePerFloor + timePerDoorCycle * doorCnt;
 }
 
-int getMin(int a, int b) {
-    if (a < b)
-        return a;
-    else
-        return b;
-}
-
-int getMax(int a, int b) {
-    if (a > b)
-        return a;
-    else
-        return b;
-}
 
 int countSum(const int arr[], int n) {
     int sum = 0;
@@ -285,22 +266,4 @@ int countSum(const int arr[], int n) {
     return sum;
 }
 
-void swap(int &a, int &b) {
-	int temp = a;
-	a = b;
-	b = temp;
-}
 
-void bubbleSort(int* arr, int n) {
-	for (int i = 0; i < n - 1; i++) {
-        bool swapped = 0;
-        for (int j = 0; j < n - i - 1; j++) {
-            if (arr[j] > arr[j + 1]) {
-                swap(arr[j], arr[j + 1]);
-                swapped = 1;
-            }
-        }
-        if (!swapped)
-            break;
-    }	
-}
