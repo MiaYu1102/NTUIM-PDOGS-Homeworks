@@ -120,9 +120,9 @@ int main() {
         }
     }
 
-    // 如果未到達時間點，則設置目標結果為 0 或 1
     if (target_result < 0) {
         target_result = (target_time > patients[num_patients].finish_time) ? 0 : 1;
     }
     cout << target_result << endl;
+    return 0;
 }

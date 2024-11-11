@@ -1,193 +1,142 @@
 #include <iostream>
-#include <fstream>
 using namespace std;
 
-class Patient
-{
-private:
-    int age; // 病人的年齡
-    int arrivalTime; // 病人到達診所的時間
-    int serviceTime; // 病人看診所需的時間
-    int finishTime; // 病人看診結束並離開診所的時間
-    int waitingTime; // 病人從到達診所到開始看診的等待時間
-    int patientsInClinicCnt; // 病人到達診所時在診所裡的病人數量
+class Patient {
 public:
+    int id;                // 病患編號
+    int arrival_time;      // 到達時間
+    int service_time;      // 看診所需時間
+    int age;               // 年齡
+    int wait_time;         // 等待時間
+    int finish_time;       // 完成時間
+    int personCnt;         // 前方有多少人在排隊
 
-    // 建構子
-    // a: 到達時間; s: 看診時間
-    Patient(int g, int a, int s);
+    bool has_arrived = false;       // 是否已到達
+    bool is_being_served = false;   // 是否正在看診
 
-    // 計算看診結束時間和等待時間
-    // currTime: 當前時間; startServiceTime: 病人開始看診的時間
-    void computeFinishAndWaitingTime(int startServiceTime);
-
-    // 如果病人和另一位病人年齡差異大於等於設定的閾值，返回 true
-    bool hasHigherPrior(Patient* another, int threshold);
-    
-    // 返回病人是否已經離開診所
-    bool isLeft(int currTime);
-
-    // 設定在診所內的病人數量
-    void setTotalPatients(int currPatientIdx, int nextLeftPatientIdx);
-
-    // 輸出指定病人的資訊
-    void printInformation() { cout << finishTime << ',' << waitingTime << ',' << patientsInClinicCnt << ','; };
-
-    // 取得相關資料
-    int getArrivalTime() { return arrivalTime; };
-    int getServiceTime() { return serviceTime; };
-    int getFinishTime() { return finishTime; };
-    int getWaitingTime() { return waitingTime; };
-    int getPatientsInClinicCnt() { return patientsInClinicCnt; };
+    // 判斷當前病患是否年長於比較的病患
+    bool isOlder(Patient other_patient, int age_threshold) {
+        return other_patient.age + age_threshold <= age;
+    }
 };
 
-Patient::Patient(int g, int a, int s)
-{
-    // 初始化
-    age = g;
-    arrivalTime = a;
-    serviceTime = s;
-    finishTime = 0;
-    waitingTime = 0;
-    patientsInClinicCnt = 0;
-}
-
-bool Patient::hasHigherPrior(Patient* another, int threshold)
-{
-    if (this->age >= another->age + threshold)
-        return true;
-    else
-        return false;
-}
-
-void Patient::computeFinishAndWaitingTime(int startServiceTime)
-{
-    finishTime = startServiceTime + serviceTime;
-    waitingTime = startServiceTime - arrivalTime;
-}
-
-bool Patient::isLeft(int currTime)
-{
-    if (currTime > arrivalTime && currTime <= finishTime)
-        return false;
-    else
-        return true;
-}
-
-void Patient::setTotalPatients(int currPatientIdx, int nextLeftPatientIdx)
-{
-    patientsInClinicCnt = currPatientIdx - nextLeftPatientIdx;
-}
-
-void swapServiceOrder(Patient& a, Patient& b)
-{
+// 自訂 swap 函式，用於交換兩個 Patient 物件的值
+void swapPatients(Patient &a, Patient &b) {
     Patient temp = a;
     a = b;
     b = temp;
 }
 
-void swapIdx(int &a, int &b)
-{
-    int temp = a;
-    a = b;
-    b = temp;
-}
+int main() {
+    const int MAX_PATIENTS = 101; // 病患的最大數量
+    const int DOCTOR_COUNT = 2;   // 醫生數量
+    int num_patients, age_threshold;
+    cin >> num_patients >> age_threshold;
 
-int main()
-{
-    // 讀取資料
-    int totalPatientCnt = 0, ageThreshold = 0;
-    cin >> totalPatientCnt >> ageThreshold;
-    int* ages = new int[totalPatientCnt];
-    for (int i = 0; i < totalPatientCnt; i++)
-        cin >> ages[i];
-    int* arrivalTimeList = new int[totalPatientCnt];
-    for (int i = 0; i < totalPatientCnt; i++)
-        cin >> arrivalTimeList[i];
-    int* serviceTimeList = new int[totalPatientCnt];
-    for (int i = 0; i < totalPatientCnt; i++)
-        cin >> serviceTimeList[i];
-    int kthPatient = 0, givenTime = 0;
-    cin >> kthPatient;
-    cin.ignore(); // 忽略逗號
-    cin >> givenTime;
+    Patient patients[MAX_PATIENTS];
 
-    // 創建變數
-    Patient** serviceOrder = new Patient*[totalPatientCnt]; // 病人服務順序
-    int* serviceOrderIdx = new int [totalPatientCnt]; // 儲存病人到達的順序
-    for (int i = 0; i < totalPatientCnt; i++)
-    {
-        serviceOrder[i] = new Patient(ages[i], arrivalTimeList[i], serviceTimeList[i]); // 創建物件並初始化
-        serviceOrderIdx[i] = i + 1;
+    // 輸入病患的年齡
+    for (int i = 1; i <= num_patients; ++i) {
+        patients[i].id = i;
+        cin >> patients[i].age;
     }
 
-    int onServiceTime = serviceOrder[0]->getArrivalTime(); // 醫生結束看診並可為下一位病人服務的時間
-    int startServiceTime = serviceOrder[0]->getArrivalTime(); // 病人開始看診的時間
-    int nextLeftPatientIdx = 0; // 下一位將離開診所的病人索引
-    int nextComePatientIdx = 1; // 下一位將到達診所的病人索引
+    // 輸入病患的到達時間
+    for (int i = 1; i <= num_patients; ++i) {
+        cin >> patients[i].arrival_time;
+    }
 
-    /* 
-    此 while 迴圈邏輯：
-    - 使用兩個索引追蹤下一位將離開和到達的病人
-    - 計算病人離開時的等待時間和結束時間，並更新醫生的服務時間
-    - 在醫生服務期間，如果有病人到達，內部 while 迴圈會檢查是否需要調整服務順序。如果需要，則交換順序
-    - 計算病人到達時診所內的病人數量，即每當病人到達時，將 nextComePatientIdx 加 1
-    */
-    while (nextLeftPatientIdx < totalPatientCnt)
-    {
-        onServiceTime += serviceOrder[nextLeftPatientIdx]->getServiceTime(); // 更新醫生可為下一位病人服務的時間
+    // 輸入病患的看診時間
+    for (int i = 1; i <= num_patients; ++i) {
+        cin >> patients[i].service_time;
+    }
 
-        while (nextComePatientIdx < totalPatientCnt && serviceOrder[nextComePatientIdx]->getArrivalTime() <= onServiceTime) // 如果有病人到達且醫生正在服務其他病人
-        {
-            // 計算診所內的病人數量
-            serviceOrder[nextComePatientIdx]->setTotalPatients(nextComePatientIdx, nextLeftPatientIdx);
+    int target_id, target_time;
+    char delimiter;
+    cin >> target_id >> delimiter >> target_time;
 
-            // 調整目前等候病人的服務順序
-            int adjustIdx = 0;
-            for (int i = nextComePatientIdx - 1; i > nextLeftPatientIdx; i--)
-            {
-                if (serviceOrder[nextComePatientIdx - adjustIdx]->hasHigherPrior(serviceOrder[i], ageThreshold)) // 檢查優先權
-                {
-                    // 後來的病人有更高的優先權 -> 改變順序（交換）
-                    swapServiceOrder(*serviceOrder[i], *serviceOrder[nextComePatientIdx - adjustIdx]);
-                    swapIdx(serviceOrderIdx[i], serviceOrderIdx[nextComePatientIdx - adjustIdx]);
-                    adjustIdx++;
-                }
-                else // 一旦條件不符合，停止進一步比較
-                    break;
+    bool currently_serving[DOCTOR_COUNT] = {false};          // 每個醫生的看診狀態
+    Patient* current_patient[DOCTOR_COUNT] = {nullptr};      // 每個醫生正在看診的病患
+    Patient* next_to_arrive = patients + 1;                  // 下一位到達的病患指標
+    Patient* next_to_serve = patients + 1;                   // 下一位等待叫號的病患指標
+    int current_time = 0;
+    int time_person_cnt = -1;
+
+    while (next_to_serve || currently_serving[0] || currently_serving[1]) {
+        // 計算診所內的病患數（已到達但未完成看診的病患數量）
+        int personCnt = (next_to_arrive - next_to_serve) + next_to_arrive->has_arrived;;
+       
+        for (int d = 0; d < DOCTOR_COUNT; ++d) {
+            if (currently_serving[d]) personCnt++;  // 正在看診的病患
+        }
+
+        // 在目標時間 t 計算順位
+        if (current_time == target_time) {
+            time_person_cnt = personCnt;
+        }
+
+        // 檢查是否結束看診
+        for (int d = 0; d < DOCTOR_COUNT; ++d) {
+            if (currently_serving[d] && current_time >= current_patient[d]->finish_time) {
+                current_patient[d]->finish_time = current_time;
+                currently_serving[d] = false;
+                current_patient[d] = nullptr;
+            }
+        }
+
+        // 檢查是否有病患到達
+        if (next_to_arrive && !next_to_arrive->has_arrived && current_time >= next_to_arrive->arrival_time) {
+            next_to_arrive->has_arrived = true;
+            next_to_arrive->personCnt = personCnt;
+
+            // 根據年齡優先權排序
+            Patient* ptr = next_to_arrive;
+            while (ptr != next_to_serve && ptr->isOlder(*(ptr - 1), age_threshold)) {
+                swapPatients(*ptr, *(ptr - 1));  // 使用自訂的 swap 函式
+                ptr--;
             }
 
-            // 跳至下一位病人
-            nextComePatientIdx++;
+            if (ptr->id != num_patients) {
+                next_to_arrive++;
+            }
         }
-        
-        // 計算病人的等待時間和結束時間
-        serviceOrder[nextLeftPatientIdx]->computeFinishAndWaitingTime(startServiceTime);
 
-        // 如果沒有病人在等待，看診時間更新
-        if (nextLeftPatientIdx < totalPatientCnt - 1 && serviceOrder[nextLeftPatientIdx + 1]->getArrivalTime() >= onServiceTime)
-            onServiceTime = serviceOrder[nextLeftPatientIdx + 1]->getArrivalTime();
-        
-        // 醫生移至下一位病人
-        nextLeftPatientIdx++;
-        startServiceTime = onServiceTime;
+        // 若無人在看診且有病患到達，則叫號
+        for (int d = 0; d < DOCTOR_COUNT; ++d) {
+            if (!currently_serving[d] && next_to_serve && next_to_serve->has_arrived) {
+                current_patient[d] = next_to_serve;
+
+                // 更新下一位等待看診的病患
+                if (next_to_serve != (patients + num_patients)) {
+                    next_to_serve++;
+                } else {
+                    next_to_serve = nullptr;
+                }
+                
+                current_patient[d]->wait_time = current_time - current_patient[d]->arrival_time;
+                current_patient[d]->finish_time = current_time + current_patient[d]->service_time;
+                current_patient[d]->is_being_served = true;
+                currently_serving[d] = true;
+                break; // 確保只有一位病患被分配給這位醫生
+            }
+        }
+
+        current_time++;
     }
 
-    // 計算在指定時間內診所內的病人數量並查找指定病人在重新排序後的索引
-    int patientsCntT = 0;
-    int WTFPatientIdx = 0;
-    for (int i = 0; i < totalPatientCnt; i++)
-    {
-        if (!serviceOrder[i]->isLeft(givenTime)) // 如果病人尚未離開，即仍在診所
-            patientsCntT++;
-
-        if (serviceOrderIdx[i] == kthPatient) // 通過查找到達索引來找到指定病人
-            WTFPatientIdx = i;
+    // 找出指定病患的完成時間、等待時間和順位
+    for (int i = 1; i <= num_patients; ++i) {
+        if (patients[i].id == target_id) {
+            cout << patients[i].finish_time << ",";
+            cout << patients[i].wait_time << ",";
+            cout << patients[i].personCnt << ",";
+            break;
+        }
     }
 
-    // 輸出結果
-    serviceOrder[WTFPatientIdx]->printInformation();
-    cout << patientsCntT;
-
+    if (time_person_cnt < 0) {
+        time_person_cnt = (target_time > patients[num_patients].finish_time) ? 0 : 1;
+    }
+    cout << time_person_cnt << endl;
     return 0;
 }

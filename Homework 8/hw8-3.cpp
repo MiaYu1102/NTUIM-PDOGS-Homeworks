@@ -1,12 +1,12 @@
-#include<iostream>
 #include <cstring>
+#include <iostream>
 using namespace std;
 
 int MAX_SIZE = 5000;
 int MAX_MATRIX_CNT = 25;
 
 class Matrix {
-private: 
+private:
     int n;
     int m;
     int** data;
@@ -18,16 +18,15 @@ public:
     Matrix(const Matrix& mat);
     ~Matrix();
 
-    friend ostream& operator << (ostream& out, const Matrix& mat);
-    friend istream& operator >> (istream& in, Matrix& mat);
-    Matrix& operator = (const Matrix& mat);
-    Matrix operator + (const Matrix& mat);
-    Matrix operator - (const Matrix& mat);
-    Matrix operator * (const Matrix& mat);
-    Matrix operator * (int num);
-    Matrix operator ! ();
+    friend ostream& operator<<(ostream& out, const Matrix& mat);
+    friend istream& operator>>(istream& in, Matrix& mat);
+    Matrix& operator=(const Matrix& mat);
+    Matrix operator+(const Matrix& mat) const;
+    Matrix operator-(const Matrix& mat) const;
+    Matrix operator*(const Matrix& mat) const;
+    Matrix operator*(int num) const;
+    Matrix operator!() const;
     bool isEmpty() const;
-
 };
 
 // constructor
@@ -43,7 +42,8 @@ Matrix::Matrix(int n, int m) : n(n), m(m) {
 Matrix::~Matrix() {
     if (data) {
         for (int i = 0; i < n; i++) {
-            if(data[i]) delete[] data[i];
+            if (data[i])
+                delete[] data[i];
         }
         delete[] data;
     }
@@ -63,13 +63,15 @@ Matrix::Matrix(const Matrix& mat) {
 }
 
 // copy assignment
-Matrix& Matrix::operator = (const Matrix& mat) {
-    if (this == &mat) return *this;
+Matrix& Matrix::operator=(const Matrix& mat) {
+    if (this == &mat)
+        return *this;
 
     // 釋放原本的記憶體
     if (data) {
         for (int i = 0; i < n; i++) {
-            if(data[i]) delete[] data[i];
+            if (data[i])
+                delete[] data[i];
         }
         delete[] data;
     }
@@ -89,9 +91,8 @@ Matrix& Matrix::operator = (const Matrix& mat) {
 }
 
 // 加
-Matrix Matrix::operator + (const Matrix& mat) {
+Matrix Matrix::operator+(const Matrix& mat) const {
     if (n != mat.n || m != mat.m) {
-        cerr<<"ERROR 3"<<endl;
         return Matrix();
     }
     Matrix result(n, m);
@@ -104,9 +105,8 @@ Matrix Matrix::operator + (const Matrix& mat) {
 }
 
 // 減
-Matrix Matrix::operator - (const Matrix& mat) {
+Matrix Matrix::operator-(const Matrix& mat) const {
     if (n != mat.n || m != mat.m) {
-        cerr<<"ERROR 2"<<endl;
         return Matrix();
     }
     Matrix result(n, m);
@@ -119,17 +119,16 @@ Matrix Matrix::operator - (const Matrix& mat) {
 }
 
 // 與矩陣相乘
-Matrix Matrix::operator * (const Matrix& mat) {
+Matrix Matrix::operator*(const Matrix& mat) const {
     if (m != mat.n) {
-        cerr<<"ERROR 1"<<endl;
         return Matrix();
     }
-    
-    Matrix result(n, mat.m);  // 新矩陣的行數為 n，列數為 mat.m
+
+    Matrix result(n, mat.m); // 新矩陣的行數為 n，列數為 mat.m
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < mat.m; j++) {
-            result.data[i][j] = 0;  // 初始化結果矩陣元素
+            result.data[i][j] = 0; // 初始化結果矩陣元素
             for (int k = 0; k < m; k++) {
                 result.data[i][j] += this->data[i][k] * mat.data[k][j];
             }
@@ -139,7 +138,7 @@ Matrix Matrix::operator * (const Matrix& mat) {
 }
 
 // 與數字相乘
-Matrix Matrix::operator * (int num) {
+Matrix Matrix::operator*(int num) const {
     Matrix result(n, m);
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
@@ -150,12 +149,12 @@ Matrix Matrix::operator * (int num) {
 }
 
 // 轉置
-Matrix Matrix::operator ! () {
-    Matrix result(m, n);  // 新矩陣的行數為 m，列數為 n
+Matrix Matrix::operator!() const {
+    Matrix result(m, n); // 新矩陣的行數為 m，列數為 n
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
-            result.data[j][i] = this->data[i][j];  // 行列互換
+            result.data[j][i] = this->data[i][j]; // 行列互換
         }
     }
 
@@ -163,9 +162,7 @@ Matrix Matrix::operator ! () {
 }
 
 // 判斷為空
-bool Matrix::isEmpty() const {
-    return (n == 0 || m == 0 || data == nullptr);
-}
+bool Matrix::isEmpty() const { return (n == 0 || m == 0 || data == nullptr); }
 
 int main() {
 
@@ -180,7 +177,8 @@ int main() {
     int len = strlen(expression);
 
     for (int k = 0; k < len; k++) {
-        if (isalpha(expression[k]) && strchr(matrix_list, expression[k]) == nullptr) { // 是字母 && 矩陣尚未被建立
+        if (isalpha(expression[k]) && strchr(matrix_list, expression[k]) ==
+                                          nullptr) { // 是字母 && 矩陣尚未被建立
             matrix_list[matrix_cnt] = expression[k];
             matrix_index[expression[k]] = matrix_cnt;
             matrix_cnt++;
@@ -197,7 +195,6 @@ int main() {
     Matrix vec;
     cin >> vec;
 
-    
     // 處理運算式
     // 先處理*和!
     int product_cnt = 0;
@@ -207,27 +204,25 @@ int main() {
     for (int i = 0; i < len; i++) {
         if (isdigit(expression[i])) {
             multiply_const *= expression[i] - '0';
-        }
-        else if (expression[i] == '+') {
-            product_terms[product_cnt] = product_terms[product_cnt] * multiply_const;
+        } else if (expression[i] == '+') {
+            product_terms[product_cnt] =
+                product_terms[product_cnt] * multiply_const;
             product_cnt++;
             multiply_const = 1;
-        } 
-        else if (expression[i] == '-') {
-            product_terms[product_cnt] = product_terms[product_cnt] * multiply_const;
+        } else if (expression[i] == '-') {
+            product_terms[product_cnt] =
+                product_terms[product_cnt] * multiply_const;
             product_cnt++;
             multiply_const = -1;
-        }
-        else if (expression[i] == '!') {
+        } else if (expression[i] == '!') {
             continue;
-        }
-        else {
+        } else {
             Matrix temp = mat[matrix_index[expression[i]]];
 
             if (i != len - 1 && expression[i + 1] == '!') {
                 temp = !mat[matrix_index[expression[i]]];
             }
-            
+
             if (product_terms[product_cnt].isEmpty()) {
                 product_terms[product_cnt] = temp;
             } else {
@@ -235,7 +230,7 @@ int main() {
             }
         }
     }
-    
+
     product_terms[product_cnt] = product_terms[product_cnt] * multiply_const;
 
     // 加起來
@@ -245,23 +240,24 @@ int main() {
     }
 
     // 計算向量乘法
-    Matrix result = exp_res*vec;
-    
+    Matrix result = exp_res * vec;
+
     // 輸出結果
-    if (result.isEmpty()) cout << -1<<endl;
-    else cout << result;
-    
+    if (result.isEmpty())
+        cout << -1 << endl;
+    else
+        cout << result;
+
     return 0;
 }
 
-
-//輸出矩陣
+// 輸出矩陣
 ostream& operator<<(ostream& out, const Matrix& mat) {
     for (int i = 0; i < mat.n; i++) {
-        for (int j = 0; j < mat.m-1; j++) {
+        for (int j = 0; j < mat.m - 1; j++) {
             out << mat.data[i][j] << " ";
         }
-        out << mat.data[i][mat.m-1];
+        out << mat.data[i][mat.m - 1];
         out << "\n";
     }
 
@@ -269,12 +265,13 @@ ostream& operator<<(ostream& out, const Matrix& mat) {
 }
 
 // 輸入矩陣
-istream& operator >> (istream& in, Matrix& mat) {
+istream& operator>>(istream& in, Matrix& mat) {
 
     // 釋放原本的記憶體
     if (mat.data) {
         for (int i = 0; i < mat.n; i++) {
-            if(mat.data[i]) delete[] mat.data[i];
+            if (mat.data[i])
+                delete[] mat.data[i];
         }
         delete[] mat.data;
     }
@@ -293,6 +290,6 @@ istream& operator >> (istream& in, Matrix& mat) {
             in >> mat.data[i][j];
         }
     }
-  
+
     return in;
 }
