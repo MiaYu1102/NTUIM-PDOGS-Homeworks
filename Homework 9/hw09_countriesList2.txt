@@ -1,0 +1,15 @@
+UniteD States,Canada,BRazil
+Germany,France,Italy
+Japan,   South Korea,Australia
+United Kingdom, China,InDia
+UniteD    States,South  Africa, Mexico
+Canada,United StaTES,Germany
+Brazil,Japan,   France
+Italy,United   Kingdom,Southkorea
+Australia,China, United   States
+CanadA, Mexico, SouthAfrica
+BrAZIL,BraziL,   Japan
+Russia,Italy,Canada
+South Korea, Germany, AUstralia
+  United       States   , France, IndiA
+BrAZil, Canada,  Russia
