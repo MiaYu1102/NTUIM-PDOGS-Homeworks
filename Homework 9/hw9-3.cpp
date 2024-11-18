@@ -1,9 +1,9 @@
-#include <iostream>
+#include <cctype>
+#include <cstring>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <cstring>
-#include <cctype>
 using namespace std;
 
 class Country {
@@ -20,29 +20,32 @@ public:
     Country(string ID, string print_name);
     void AddMedal(int g, int s, int b, int t);
     bool operator<(const Country& cty) const;
-    
+
     string GetID() const { return ID; }
     string GetName() const { return print_name; }
     int GetGold() const { return gold; }
     int GetSilver() const { return silver; }
     int GetBronze() const { return bronze; }
-
 };
 
 // Default constructor
-Country::Country() : ID(""), print_name(""), gold(0), silver(0), bronze(0), last_gold_time(0) {};
+Country::Country()
+    : ID(""), print_name(""), gold(0), silver(0), bronze(0),
+      last_gold_time(0){};
 
 // Parameterized constructor
-Country::Country(string ID, string print_name) : ID(ID), print_name(print_name), gold(0), silver(0), bronze(0), last_gold_time(0) {};
+Country::Country(string ID, string print_name)
+    : ID(ID), print_name(print_name), gold(0), silver(0), bronze(0),
+      last_gold_time(0){};
 
-void Country:: AddMedal(int g, int s, int b, int t) {
+void Country::AddMedal(int g, int s, int b, int t) {
     gold += g;
     silver += s;
     bronze += b;
 
     // 更新 last_gold_time（假設這裡傳入的 g > 0 意味著有金牌新增）
     if (g > 0) {
-        last_gold_time = t; 
+        last_gold_time = t;
     }
 }
 
@@ -64,71 +67,70 @@ bool Country::operator<(const Country& cty) const {
     return last_gold_time > cty.last_gold_time;
 }
 
-//function
+// function
 void Sort(Country*& countries, int size);
 void PrintTopThree(Country* countries);
 bool isNameExist(Country* countries, int size, const string& name);
 string AdjustName(string name, bool needToLower);
 void expandArray(Country*& countries, int& capacity);
 
-
 int main() {
-    //引入txt
+    // 引入txt
     string file_address;
-    cin>>file_address;
+    cin >> file_address;
     ifstream inFile(file_address);
     if (!inFile) {
         cerr << "Error opening file." << endl;
         return 1;
     }
 
-    //創建動態陣列
+    // 創建動態陣列
     int capacity = 100; // Initial capacity
-    int size = 0; // Current number of elements
+    int size = 0;       // Current number of elements
     Country* countries = new Country[capacity];
 
-    //讀取內容
+    // 讀取內容
     string line;
     int time = 0;
-    while(getline(inFile, line)) {
+    while (getline(inFile, line)) {
         stringstream ss(line);
         time++;
         string country_name;
         int medal_type = 1;
         bool needToLower = 0;
 
-        while (getline(ss, country_name, ',')){
+        while (getline(ss, country_name, ',')) {
             needToLower = 0;
             country_name = AdjustName(country_name, needToLower);
             needToLower = 1;
             string adjust_country = AdjustName(country_name, needToLower);
 
             bool exists = isNameExist(countries, size, adjust_country);
-            if(!exists){
+            if (!exists) {
                 // 擴充動態陣列
                 if (size >= capacity) {
-                    expandArray(countries, capacity);  
+                    expandArray(countries, capacity);
                 }
-                //塞入陣列
+                // 塞入陣列
                 countries[size] = Country(country_name, adjust_country);
                 size++;
             }
             // 找到國家後更新獎牌數
             for (int i = 0; i < size; i++) {
                 if (countries[i].GetName() == adjust_country) {
-                    countries[i].AddMedal(medal_type == 1, medal_type == 2, medal_type == 3, time);
+                    countries[i].AddMedal(medal_type == 1, medal_type == 2,
+                                          medal_type == 3, time);
                     break;
                 }
             }
             medal_type++;
-
         }
     }
 
-    //排序
+    // 排序
     Sort(countries, size);
 
-    //輸出
+    // 輸出
     PrintTopThree(countries);
 
     delete[] countries;
@@ -151,10 +153,9 @@ void Sort(Country*& countries, int size) {
 
 void PrintTopThree(Country* countries) {
     for (int i = 0; i < 3; i++) {
-        cout << countries[i].GetID() << ":"
-             << countries[i].GetGold()
-             << "," << countries[i].GetSilver()
-             << "," << countries[i].GetBronze() << endl;
+        cout << countries[i].GetID() << ":" << countries[i].GetGold() << ","
+             << countries[i].GetSilver() << "," << countries[i].GetBronze()
+             << endl;
     }
 }
 
@@ -170,7 +171,7 @@ bool isNameExist(Country* countries, int size, const string& name) {
 
 // 將國家名稱去除空格並改為全小寫
 string AdjustName(string str, bool needToLower) {
-    
+
     // 去除前導空白
     auto start = str.begin();
     while (start != str.end() && isspace(*start)) {
@@ -195,7 +196,7 @@ string AdjustName(string str, bool needToLower) {
         }
         result += word;
     }
-    if(needToLower){
+    if (needToLower) {
         for (char& c : result) {
             c = tolower(c);
         }
@@ -216,4 +217,3 @@ void expandArray(Country*& countries, int& capacity) {
     countries = new_array;
     capacity = new_capacity;
 }
-
