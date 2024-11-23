@@ -11,7 +11,7 @@ struct Patient
 
     int serviceBy = -1;
     int finishTime = -1;
-    int waitingTime = -1;
+    
 };
 
 // Implement PatientVector class
@@ -48,7 +48,7 @@ class PatientVector{
             patients[size]->serviceTime = patient.serviceTime;
             patients[size]->serviceBy = patient.serviceBy;
             patients[size]->finishTime = patient.finishTime;
-            patients[size]->waitingTime = patient.waitingTime;
+            
             size++;
         }
         int getSize(){ // get the size of the vector
@@ -58,10 +58,15 @@ class PatientVector{
             return *patients[idx];
         }
         void eraseBegin(){ // erase the first patient in the vector
-            for(int i = 0; i < size-1; i++){
-                patients[i] = patients[i+1];
+            if (size > 0)
+            {
+                delete patients[0]; // 釋放第一個病患的記憶體
+                for (int i = 0; i < size-1; i++)
+                {
+                    patients[i] = patients[i+1];
+                }
+                size--;
             }
-            size--;
         }
 };
 
@@ -72,38 +77,35 @@ private:
     PatientVector patients;
     PatientVector doctorOnePatientsQueue;
     PatientVector doctorTwoPatientsQueue;
-    PatientVector servedPatients;
     int patientCnt;
     int ageThreshold;
-    int secondDoctorJoinTime;
+
+    int doctorJoinThreshold;
+    bool doctorTwoJoined;    // 紀錄醫師2是否已加入
 
     int currentTime;
 
+    int doctorOneCount; // 醫師1看診人數
+    int doctorTwoCount; // 醫師2看診人數
 
-    int targetPatientIdx;
-    int targetTime;
-
-    int targetTimePatientCnt;
-    int targetPatientPatientCnt;
 
 public:
-    Clinic(int patientCnt, int ageThreshold, int secondDoctorJoinTime, int targetPatientIdx, int targetTime) // constructor
+    int servedPatientCnt = 0;
+    Clinic(int patientCnt, int ageThreshold, int doctorJoinThreshold) // constructor
     {
         this->patientCnt = patientCnt;
         this->ageThreshold = ageThreshold;
-        this->secondDoctorJoinTime = secondDoctorJoinTime;
+        this->doctorJoinThreshold = doctorJoinThreshold;
         patients.reserve(patientCnt);
         doctorOnePatientsQueue.reserve(patientCnt);
         doctorTwoPatientsQueue.reserve(patientCnt);
-        servedPatients.reserve(patientCnt);
 
+        doctorTwoJoined = false; // 初始時醫師2未加入
         currentTime = 0;
 
-        this->targetPatientIdx = targetPatientIdx-1;
-        this->targetTime = targetTime;
+        doctorOneCount = 0;
+        doctorTwoCount = 0;
 
-        targetTimePatientCnt = 0;
-        targetPatientPatientCnt = 0;
     }
     void push_back_client(int idx, int age, int arrivalTime, int serviceTime) // add a patient to the clinic
     {
@@ -133,22 +135,7 @@ public:
         }
         doctorOnePatientsQueue = temp;
     }
-    void sortServedClient() // sort the served clients by their idx
-    {
-        // sort by the idx of served clients, from smallest to largest
-        for (int i = 0; i < servedPatients.getSize(); i++)
-        {
-            for (int j = 0; j < servedPatients.getSize() - i - 1; j++)
-            {
-                if (servedPatients[j].idx > servedPatients[j + 1].idx)
-                {
-                    Patient temp = servedPatients[j];
-                    servedPatients[j] = servedPatients[j + 1];
-                    servedPatients[j + 1] = temp;
-                }
-            }
-        }
-    }
+    
     void handleSwap(int doctorIdx){ // handle the swap between the clients in the queue
         // target: the last pushed client
         // if the target is older than its previous client by ageThreshold, and the client is not served, swap them
@@ -185,36 +172,20 @@ public:
         }
     }
     void printAnswer(){ // print the answer
-        sortServedClient();
-        for(int i = 0; i < servedPatients.getSize(); i++){
-        }
-        cout << servedPatients[targetPatientIdx].finishTime << "," << servedPatients[targetPatientIdx].waitingTime << "," << targetPatientPatientCnt << "," << targetTimePatientCnt;
+        cout << doctorOneCount << "," << doctorTwoCount; // 輸出D1和D2
     }
     void simulation(){
-        while(servedPatients.getSize() < patientCnt){
-
-            // check if the it's target time
-            if(currentTime == targetTime){
-                targetTimePatientCnt = 0;
-                targetTimePatientCnt += doctorOnePatientsQueue.getSize();
-                targetTimePatientCnt += doctorTwoPatientsQueue.getSize();
-            }
+        while(servedPatientCnt < patientCnt){
 
             // check if there a patient arrived
             // check the first patient in the queue
             if(patients.getSize() > 0){
                 if(patients[0].arrivalTime == currentTime){
 
-                    // check if the target patient is in the clinic
-                    if(patients[0].idx == targetPatientIdx){
-                        targetPatientPatientCnt = 0;
-                        targetPatientPatientCnt += doctorOnePatientsQueue.getSize();
-                        targetPatientPatientCnt += doctorTwoPatientsQueue.getSize();
-                    }
-
-                    if(currentTime <= secondDoctorJoinTime){
+                    if(!doctorTwoJoined){
                         doctorOnePatientsQueue.push_back(patients[0]);
                         handleSwap(1);
+                        
                     }
                     else{
                         int doctorOneLoading = doctorOnePatientsQueue.getSize();
@@ -238,13 +209,16 @@ public:
             // check if the current client is served
             if(doctorOnePatientsQueue.getSize() > 0){
                 if(doctorOnePatientsQueue[0].finishTime == currentTime){
-                    servedPatients.push_back(doctorOnePatientsQueue[0]);
+                    cerr<<"Doctor 1 served patient "<<doctorOnePatientsQueue[0].idx<<" at time "<<currentTime<<endl;
+                    servedPatientCnt++;
+                    doctorOneCount++; // 醫師1看診人數加1
                     doctorOnePatientsQueue.eraseBegin();
                 }
             }
             if(doctorTwoPatientsQueue.getSize() > 0){
                 if(doctorTwoPatientsQueue[0].finishTime == currentTime){
-                    servedPatients.push_back(doctorTwoPatientsQueue[0]);
+                    servedPatientCnt++;
+                    doctorTwoCount++; // 醫師2看診人數加1
                     doctorTwoPatientsQueue.eraseBegin();
                 }
             }
@@ -254,25 +228,26 @@ public:
                 if(doctorOnePatientsQueue[0].serviceBy == -1){
                     doctorOnePatientsQueue[0].serviceBy = 1;
                     doctorOnePatientsQueue[0].finishTime = currentTime + doctorOnePatientsQueue[0].serviceTime;
-                    doctorOnePatientsQueue[0].waitingTime = currentTime - doctorOnePatientsQueue[0].arrivalTime;
+                    
                 }
             }
             if(doctorTwoPatientsQueue.getSize() > 0){
                 if(doctorTwoPatientsQueue[0].serviceBy == -1){
                     doctorTwoPatientsQueue[0].serviceBy = 2;
                     doctorTwoPatientsQueue[0].finishTime = currentTime + doctorTwoPatientsQueue[0].serviceTime;
-                    doctorTwoPatientsQueue[0].waitingTime = currentTime - doctorTwoPatientsQueue[0].arrivalTime;
+                    
                 }
             }
 
             // check if the second doctor should join
-            if(currentTime == secondDoctorJoinTime){
+            if(!doctorTwoJoined && doctorOnePatientsQueue.getSize()-(doctorOnePatientsQueue.getSize()!=0) >= doctorJoinThreshold){
+
+                doctorTwoJoined = true; // 醫師2加入看診
                 splitLoad();
                 if(doctorTwoPatientsQueue.getSize() > 0){
                     if(doctorTwoPatientsQueue[0].serviceBy == -1){
                         doctorTwoPatientsQueue[0].serviceBy = 2;
                         doctorTwoPatientsQueue[0].finishTime = currentTime + doctorTwoPatientsQueue[0].serviceTime;
-                        doctorTwoPatientsQueue[0].waitingTime = currentTime - doctorTwoPatientsQueue[0].arrivalTime;
                     }
                 }
             }
@@ -283,40 +258,27 @@ public:
 
 int main()
 {
-    // data input
-    int patientCnt;
-    int ageThreshold;
-    int secondDoctorJoinTime;
-    cin >> patientCnt >> ageThreshold >> secondDoctorJoinTime;
-    int* age = new int [patientCnt];
-    int* arrivalTime = new int [patientCnt];
-    int* serviceTime = new int [patientCnt];
-    for(int i = 0; i < patientCnt; i++){
-        cin >> age[i];
-    }
-    for(int i = 0; i < patientCnt; i++){
-        cin >> arrivalTime[i];
-    }
-    for(int i = 0; i < patientCnt; i++){
-        cin >> serviceTime[i];
-    }
-    int targetPatientIdx, targetTime;
-    char c;
-    cin >> targetPatientIdx >> c >> targetTime;
+    // 輸入診所參數
+    int patientCnt, ageThreshold, doctorJoinThreshold;
+    cin >> patientCnt >> ageThreshold >> doctorJoinThreshold;
 
-    // Clinic object, and push the clients into the clinic
-    Clinic clinic(patientCnt, ageThreshold, secondDoctorJoinTime, targetPatientIdx, targetTime);
-    for(int i = 0; i < patientCnt; i++){
-        clinic.push_back_client(i, age[i], arrivalTime[i], serviceTime[i]);
+
+    // 初始化診所物件
+    Clinic clinic(patientCnt, ageThreshold, doctorJoinThreshold); // 移除目標病患與時間相關參數
+
+    // 一次輸入每個病患的年齡、到診時間與看診時間
+    for (int i = 0; i < patientCnt; i++)
+    {
+        int age, arrivalTime, serviceTime;
+        cin >> age >> arrivalTime >> serviceTime;
+        clinic.push_back_client(i, age, arrivalTime, serviceTime);
     }
 
-    // Clinic simulation
+    // 執行模擬
     clinic.simulation();
 
-    // print the answer
+    // 輸出結果
     clinic.printAnswer();
 
-    delete[] age;
-    delete[] arrivalTime;
-    delete[] serviceTime;
+    return 0;
 }
