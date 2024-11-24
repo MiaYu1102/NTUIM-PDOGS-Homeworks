@@ -1,5 +1,5 @@
-#include<bits/stdc++.h> 
-using namespace std;   
+#include<bits/stdc++.h>  //待修改
+using std::string, std::cout, std::cin, std::endl, std::cerr, std::to_string, std::istringstream, std::noskipws, std::stoi;  
 
 // 全域變數
 const int MAX_TOKENS = 50;
@@ -26,9 +26,13 @@ protected:
     // some other things that you want to add
 public:
     Event(Date date , Time begin , Time end , string name = "");
+    Event(const Event &e);
+    Event& operator=(const Event &e);
     void modify(Date date , Time begin , Time end , string name = "");
     void print () const;
     bool isConflictWith(const Event& e) const;
+    bool isLaterThan(const Event& other) const;
+    friend class Calendar;
     // some other things that you want to add
 };
 Event::Event(Date date , Time begin , Time end , string name)
@@ -37,6 +41,21 @@ Event::Event(Date date , Time begin , Time end , string name)
     this->begin = begin;
     this->end = end;
     this->name = name;
+}
+Event::Event(const Event &e)
+{
+    this->date = e.date;
+    this->begin = e.begin;
+    this->end = e.end;
+    this->name = e.name;
+}
+Event& Event::operator=(const Event &e)
+{
+    this->date = e.date;
+    this->begin = e.begin;
+    this->end = e.end;
+    this->name = e.name;
+    return *this;
 }
 void Event::modify(Date date , Time begin , Time end , string name)
 {
@@ -93,13 +112,34 @@ bool Event::isConflictWith(const Event& event) const {
     int timeEnd = this->end.hour * 60 + this->end.minute;
     int timeBegin_event = event.begin.hour * 60 + event.begin.minute;
     int timeEnd_event = event.end.hour * 60 + event.end.minute;
-    if(timeBegin_event >= timeEnd || timeEnd_event <= timeBegin) {
-        return false;
+    if (timeBegin_event > timeEnd || timeEnd_event < timeBegin) {
+        return false; // 修正重疊情況
     }
 
     return true;
 }
-
+bool Event::isLaterThan(const Event& other) const {
+    if(this->date.year > other.date.year) {
+        return true;
+    } else if(this->date.year == other.date.year) {
+        if(this->date.month > other.date.month) {
+            return true;
+        } else if(this->date.month == other.date.month) {
+            if(this->date.day > other.date.day) {
+                return true;
+            } else if(this->date.day == other.date.day) {
+                if(this->begin.hour > other.begin.hour) {
+                    return true;
+                } else if(this->begin.hour == other.begin.hour) {
+                    if(this->begin.minute > other.begin.minute) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
 class Calendar
 {
 private:
@@ -112,8 +152,9 @@ public:
     Calendar();
     Calendar(string ownerName);
     Calendar(const Calendar& c);
-    ~Calendar ();
-    
+    Calendar& operator=(const Calendar& c);
+    ~Calendar();
+
     void setOwnerName(string newOwnerName);
     string getOwnerName () const;
     int getEventCnt () const;
@@ -121,16 +162,18 @@ public:
     bool addEvent(Date date , Time begin , Time end , string name);
     bool removeEvent(Date date , Time begin , string name);
     bool modifyEvent(Date date , Time begin , string name , Date newDate ,
-    Time newBegin , Time newEnd , string newName);
+    Time newBegin, Time newEnd , string newName);
+    void expandEventCnt(int newEventCnt);
 
     void printEvent(Date date , Time begin , string name) const;
     void printCalendarOldToNew () const;
 
     static void setEventCntMax(int eventCntMax);
+    static void setDefaultEventCntMax(int eventCntMax);
     // some other things that you want to add
 };
 
-int Calendar::eventCntMax = 100;  //待修改
+int Calendar::eventCntMax = 0;  //待修改
 
 // Default constructor
 Calendar::Calendar()
@@ -145,24 +188,44 @@ Calendar::Calendar(string ownerName)
     events = new Event*[eventCntMax];
     eventCnt = 0;
 }
-Calendar::Calendar(const Calendar& c) //待修改
+Calendar::Calendar(const Calendar& c) // deep copy constructor
 {
     ownerName = c.ownerName;
     eventCnt = c.eventCnt;
     events = new Event*[eventCntMax];
-    for(int i = 0; i < eventCnt; i++)
-    {
-        events[i] = c.events[i];
+    if (events != nullptr) {
+        for(int i = 0; i < eventCnt; i++)
+        { 
+            events[i] = new Event(*c.events[i]);
+        }
     }
+}
+Calendar& Calendar::operator=(const Calendar& c) // deep copy assignment
+{
+    if (this == &c) {
+        return *this;
+    }
+    ownerName = c.ownerName;
+    eventCnt = c.eventCnt;
+    for (int i = 0; i < eventCnt; i++) {
+        delete events[i];
+    }
+    delete[] events;
+    events = new Event*[eventCntMax];
+    for (int i = 0; i < eventCnt; i++) {
+        events[i] = new Event(*c.events[i]);
+    }
+    return *this;
 }
 Calendar::~Calendar() {
     if (events != nullptr) {
         for (int i = 0; i < eventCnt; i++) {
-            delete events[i];
+            if(events[i]) delete events[i];
         }
         delete[] events;
     }
 }
+
 void Calendar::setOwnerName(string newOwnerName) {
     ownerName = newOwnerName;
 }
@@ -184,6 +247,7 @@ bool Calendar::addEvent(Date date , Time begin , Time end , string name)
     {
         if(events[i]->isConflictWith(*newEvent))
         {
+            delete newEvent;
             return false;
         }
     }
@@ -216,6 +280,9 @@ bool Calendar::removeEvent(Date date , Time begin , string name)
 }
 bool Calendar::modifyEvent(Date date , Time begin , string name , Date newDate , Time newBegin , Time newEnd , string newName)
 {
+    // Event* newEvent = new Event(newDate , newBegin , newEnd , newName);
+                
+    
     for(int i = 0; i < eventCnt; i++)
     {
         if(events[i]->date.year == date.year && events[i]->date.month == date.month && events[i]->date.day == date.day)
@@ -224,7 +291,26 @@ bool Calendar::modifyEvent(Date date , Time begin , string name , Date newDate ,
             {
                 if(events[i]->name == name)
                 {
+                    //保留原數值
+                    Date originDate = events[i]->date;
+                    Time originBegin = events[i]->begin;
+                    Time originEnd = events[i]->end;
+                    string originName = events[i]->name;
+
+                    //修改
                     events[i]->modify(newDate , newBegin , newEnd , newName);
+                    for(int j = 0; j < eventCnt; j++)
+                    {
+                        if(j == i)
+                        {
+                            continue;
+                        }
+                        if(events[j]->isConflictWith(*events[i]))
+                        {
+                            events[i]->modify(originDate , originBegin , originEnd , originName);
+                            return false;
+                        }
+                    }
                     return true;
                 }
             }
@@ -232,6 +318,16 @@ bool Calendar::modifyEvent(Date date , Time begin , string name , Date newDate ,
     }
     return false;
 }
+
+void Calendar::expandEventCnt(int newEventCnt) {
+        Event** newEvents = new Event*[newEventCnt];
+        for (int i = 0; i < eventCnt; i++) {
+            newEvents[i] = events[i];
+        }
+        delete[] events;
+        events = newEvents;
+}
+
 void Calendar::printEvent(Date date , Time begin , string name) const
 {
     for(int i = 0; i < eventCnt; i++)
@@ -248,10 +344,22 @@ void Calendar::printEvent(Date date , Time begin , string name) const
             }
         }
     }
-    cout << "Event not found." << endl;
+    cout << "";
+}
+void sortEvent(Event** events, int eventCnt) {
+    for (int i = 1; i < eventCnt; i++) {
+        Event* key = events[i];
+        int j = i - 1;
+        while (j >= 0 && !key->isLaterThan(*events[j])) {
+            events[j + 1] = events[j];
+            j--;
+        }
+        events[j + 1] = key;
+    }
 }
 void Calendar::printCalendarOldToNew() const
 {
+    sortEvent(events, eventCnt);
     for(int i = 0; i < eventCnt; i++)
     {
         events[i]->print();
@@ -260,119 +368,152 @@ void Calendar::printCalendarOldToNew() const
 void Calendar::setEventCntMax(int eventCntMax) {
     Calendar::eventCntMax = eventCntMax;
 }
+void Calendar::setDefaultEventCntMax(int eventCntMax) {
+    Calendar::eventCntMax = eventCntMax;
+}
 
-//------------------以下是手打的內容--------------------------
+
 
 // function
-bool isUserExist(Calendar* calenders, int user_cnt, string ownerName);
+bool isUserExist(Calendar* calendars, int user_cnt, string ownerName);
 void splitString(const string& str, string* result);
-void classifyByType(string* tokens, Calendar* calenders, int user_cnt);
-void expandArray(Calendar*& calenders, int& capacity);
+void classifyByType(string* tokens, Calendar* calendars, int user_cnt);
+void expandArray(Calendar*& calendars, int& capacity);
+
 
 Date strToDate(string date_str);
 Time strToTime(string time_str);
 
 string queryModfiy(string query);
-void queryPrint(string query_user, int user_cnt, Calendar* calenders);
+void queryPrint(string query_user, int user_cnt, Calendar* calendars);
 
 bool isLeapYear(int year);
 bool checkDateFormat(Date date);
 bool checkTimeFormat(Time time);
+bool checkBeginEndTime(Time begin, Time end);
 
 int main(){
     int n; cin>>n;
     int event_cnt_limit; cin>>event_cnt_limit;
+    Calendar::setEventCntMax(event_cnt_limit);
 
     // 創建calender動態陣列
-    int capacity = 100; // Initial capacity
+    int capacity = 1000; // Initial capacity
     int user_cnt = 0;   // Current number of users
-    Calendar* calenders = new Calendar[capacity];
-
+    Calendar* calendars = new Calendar[capacity];
+    if (cin.peek() == '\n') {
+        cin.ignore(); // 確保忽略換行符
+    }
+    
     // 處理n筆操作
     for(int i=0;i<n;i++)
     {
-       //讀取操作指令
-       string operation;
-       cin>>operation;
-       
-       //分割字串
-       string tokens[MAX_TOKENS];
-       splitString(operation, tokens);
+        //讀取操作指令
+        string operation;
+        
+        getline(cin, operation);
+        
+        //分割字串
+        string tokens[MAX_TOKENS];
+        splitString(operation, tokens);
+
 
        //分類操作類型
-       if(tokens[0]=="CC" && !isUserExist(calenders, user_cnt, tokens[1])) // create calender
-       {    
+        if(tokens[0]=="CC" && !isUserExist(calendars, user_cnt, tokens[1])) // create calender
+        {    
             string ownerName = tokens[1];
             // 擴充動態陣列
             if (user_cnt >= capacity) {
-                    expandArray(calenders, capacity);
+                expandArray(calendars, capacity);
             }
             // 塞入陣列
-            calenders[user_cnt] = Calendar(ownerName);
+            calendars[user_cnt] = Calendar(ownerName);
             user_cnt++;
-       }
-       else if(tokens[0]=="EX") // expand event count limit
-       {
+        }
+        else if(tokens[0]=="EX") // expand event count limit
+        {
             //格式: EX 5
             int add_event_cnt = stoi(tokens[1]);
-            if(add_event_cnt < 0){
+            if(add_event_cnt <= 0){
                 cerr << "Invalid number." << endl;
             }
             else{
                 event_cnt_limit += add_event_cnt;
                 Calendar::setEventCntMax(event_cnt_limit);
+                for (int j = 0; j < user_cnt; j++) {
+                    calendars[j].expandEventCnt(event_cnt_limit);
+                }
             }
             
-       }
-       else classifyByType(tokens, calenders, user_cnt);
+        }
+        else classifyByType(tokens, calendars, user_cnt);
     }
 
     // 處理詢問
-    string query; cin>>query;
+    string query;
+    getline(cin, query);
     string query_user = queryModfiy(query);
-    queryPrint(query_user, user_cnt, calenders);
-
+    
+    queryPrint(query_user, user_cnt, calendars);
+    
+    delete[] calendars;
     return 0;
 }
 
 
 // function
-bool isUserExist(Calendar* calenders, int user_cnt, string ownerName) {
+bool isUserExist(Calendar* calendars, int user_cnt, string ownerName) {
     for(int i=0;i<user_cnt;i++){
-        if(calenders[i].getOwnerName() == ownerName){
+        if(calendars[i].getOwnerName() == ownerName){
             return true;
         }
     }
     return false;
 }
+
 void splitString(const string& str, string* result) {
     istringstream ss(str);
     string token;
     bool inQuotes = false; // 判斷是否處於雙引號內
     string quotedContent;
     int resultSize = 0;
-
-    while (ss >> noskipws >> token) { // 不忽略空白
-        if (token.front() == '"' && !inQuotes) { // 遇到開頭的雙引號
+    
+    while (ss >> token) { // 不忽略空白
+        if (token.front() == '"' && token.back() == '"' && token.size()!=1 && !inQuotes) {
+            result[resultSize++] = token.substr(1, token.size() - 2);
+        }
+        else if (token.front() == '"' && !inQuotes) { // 遇到開頭的雙引號
             inQuotes = true;
             quotedContent = token.substr(1); // 移除開頭雙引號
-        } else if (token.back() == '"' && inQuotes) { // 遇到結尾的雙引號
+        }
+        else if (token.back() == '"' && inQuotes) { // 遇到結尾的雙引號
             inQuotes = false;
             quotedContent += " " + token.substr(0, token.size() - 1); // 加入結尾
             if (resultSize < MAX_TOKENS) { // 使用全域變數作為限制
                 result[resultSize++] = quotedContent; // 將完整內容加入結果
+                quotedContent = "";
             }
-        } else if (inQuotes) { // 處於雙引號內
+        }
+        else if (inQuotes) { // 處於雙引號內
             quotedContent += " " + token;
-        } else { // 普通空格分隔部分
+        } 
+        else { // 普通空格分隔部分
             if (resultSize < MAX_TOKENS) { // 使用全域變數作為限制
                 result[resultSize++] = token;
             }
         }
     }
+    /*
+    for (int i = 0; i < resultSize; i++) {
+        cerr << "\033[32m" << i << " ";
+        cerr << result[i] <<"\033[0m"<< endl;
+    }
+    */
 }
-void classifyByType(string* tokens, Calendar* calenders, int user_cnt) {
+
+void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
     //判斷操作類型
+    
     if(tokens[0]=="AE") // add event
     {  
         //格式: AE "Bob" 2024/11/13 13:00 15:00 "PD Quiz"
@@ -382,7 +523,7 @@ void classifyByType(string* tokens, Calendar* calenders, int user_cnt) {
         string date_str = tokens[2];
         string begin_str = tokens[3];
         string end_str = tokens[4];
-        string event_name_str = tokens[5];
+        string event_name = tokens[5];
 
         // transform format
         Date date = strToDate(date_str);
@@ -394,12 +535,27 @@ void classifyByType(string* tokens, Calendar* calenders, int user_cnt) {
             cerr << "Invalid date or time." << endl;
             return;
         }
-        if(!isUserExist(calenders, user_cnt, owner_name)){
+        if(!isUserExist(calendars, user_cnt, owner_name)){
             cerr << "User not found." << endl;
             return;
         }
+        if(!checkBeginEndTime(begin, end)){
+            cerr << "Invalid time." << endl;
+            return;
+        }
         // add event
-        bool isAdd = 
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isAdd = calendars[i].addEvent(date, begin, end, event_name);
+                if(isAdd){
+                    return;
+                }
+                else{
+                    cerr << "Time conflict." << endl;
+                    return;
+                }
+            }
+        }
 
     }
     else if(tokens[0]=="ME") // modify event
@@ -428,12 +584,24 @@ void classifyByType(string* tokens, Calendar* calenders, int user_cnt) {
             cerr << "Invalid date or time." << endl;
             return;
         }
-        if(!isUserExist(calenders, user_cnt, owner_name)){
+        if(!isUserExist(calendars, user_cnt, owner_name)){
             cerr << "User not found." << endl;
+            return;
+        }
+        if(!checkBeginEndTime(new_begin, new_end)){
+            cerr << "Invalid time." << endl;
             return;
         }
 
         // modify event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isModify = calendars[i].modifyEvent(origin_date, origin_begin, origin_event_name, new_date, new_begin, new_end, new_event_name);
+                if(isModify){
+                    return;
+                }
+            }
+        }
 
     }
     else if(tokens[0]=="RE") // remove event
@@ -455,27 +623,36 @@ void classifyByType(string* tokens, Calendar* calenders, int user_cnt) {
             cerr << "Invalid date or time." << endl;
             return;
         }
-        if(!isUserExist(calenders, user_cnt, owner_name)){
+        if(!isUserExist(calendars, user_cnt, owner_name)){
             cerr << "User not found." << endl;
             return;
         }
 
         // remove event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isRemove = calendars[i].removeEvent(date, begin, event_name);
+                if(isRemove){
+                    return;
+                }
+            }
+        }
         
     }
 }  
-void expandArray(Calendar*& calenders, int& capacity) {
+void expandArray(Calendar*& calendars, int& capacity) {
     int new_capacity = capacity * 2;
     Calendar* new_array = new Calendar[new_capacity];
 
     for (int i = 0; i < capacity; i++) {
-        new_array[i] = calenders[i];
+        new_array[i] = calendars[i];
     }
 
-    delete[] calenders;
-    calenders = new_array;
+    delete[] calendars;
+    calendars = new_array;
     capacity = new_capacity;
 }
+
 
 Date strToDate(string date_str) {
     //格式: 2024/11/13
@@ -495,19 +672,22 @@ Time strToTime(string time_str) {
 
 string queryModfiy(string query) {
     //格式: Q "Bob"
+    cerr << "\033[32m" << "有執行"  <<"\033[0m" << endl;
     string query_user = query.substr(3);
-    query.erase(query.size() - 1);
+    query_user.pop_back();
+
+    cerr << "\033[32m" << query_user <<"\033[0m" << endl;
     return query_user;
 }
-void queryPrint(string query_user, int user_cnt, Calendar* calenders) {
+void queryPrint(string query_user, int user_cnt, Calendar* calendars) {
     //格式: 
     // Bob
     // PD Quiz: 2024/11/13, 16:00, 18:00.
     // Concert: 2024/11/20, 19:00, 20:00.
     cout << query_user << endl;
     for(int i=0;i<user_cnt;i++){
-        if(calenders[i].getOwnerName() == query_user){
-            calenders[i].printCalendarOldToNew();
+        if(calendars[i].getOwnerName() == query_user){
+            calendars[i].printCalendarOldToNew();
         }
     }
 }
@@ -557,6 +737,17 @@ bool checkTimeFormat(Time time) {
     }
     if(time.minute < 0 || time.minute > 59) {
         return false;
+    }
+    return true;
+}
+
+bool checkBeginEndTime(Time begin, Time end) {
+    if (begin.hour > end.hour) {
+        return false;
+    } else if (begin.hour == end.hour) {
+        if (begin.minute >= end.minute) {
+            return false;
+        }
     }
     return true;
 }
