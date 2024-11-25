@@ -1,4 +1,7 @@
-#include<bits/stdc++.h>  //待修改
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
 using namespace std;
 
 // 全域變數
@@ -29,10 +32,11 @@ public:
     Event(const Event &e);
     Event& operator=(const Event &e);
     void modify(Date date , Time begin , Time end , string name = "");
-    void print () const;
+    virtual void print () const;
     bool isConflictWith(const Event& e) const;
     bool isLaterThan(const Event& other) const;
     friend class Calendar;
+    virtual ~Event() {};
     // some other things that you want to add
 };
 Event::Event(Date date , Time begin , Time end , string name)
@@ -112,8 +116,8 @@ bool Event::isConflictWith(const Event& event) const {
     int timeEnd = this->end.hour * 60 + this->end.minute;
     int timeBegin_event = event.begin.hour * 60 + event.begin.minute;
     int timeEnd_event = event.end.hour * 60 + event.end.minute;
-    if (timeBegin_event > timeEnd || timeEnd_event < timeBegin) {
-        return false; // 修正重疊情況
+    if (timeBegin_event >= timeEnd || timeEnd_event <= timeBegin) {
+        return false; 
     }
 
     return true;
@@ -140,6 +144,103 @@ bool Event::isLaterThan(const Event& other) const {
     }
     return false;
 }
+
+// hw10-3-----------------------------------------------------------------
+class AlertEvent : public Event 
+{
+private:
+    int aheadAlertMinutes;
+    // some other things that you want to add
+public:
+    AlertEvent(Date date, Time begin, Time end, string name, 
+               int aheadAlertMinutes);
+    int getAheadAlertMinutes() const; 
+    void modify(Date date, Time begin, Time end, string name, 
+                int aheadAlertMinutes);
+    void print() const override;  
+    // some other things that you want to add
+};
+
+AlertEvent::AlertEvent(Date date, Time begin, Time end, string name, int aheadAlertMinutes)
+    : Event(date, begin, end, name), aheadAlertMinutes(aheadAlertMinutes) {}
+int AlertEvent::getAheadAlertMinutes() const {
+    return aheadAlertMinutes;
+}
+void AlertEvent::modify(Date date, Time begin, Time end, string name, int aheadAlertMinutes) {
+    Event::modify(date, begin, end, name);
+    this->aheadAlertMinutes = aheadAlertMinutes;
+}
+void AlertEvent::print() const {
+    cout << this->name;
+    cout << ": ";
+
+    string date = to_string(this->date.year);
+    string month = to_string(this->date.month);
+    string day = to_string(this->date.day);
+    if(month.length() == 1) {
+        month = "0" + month;
+    }
+    if(day.length() == 1) {
+        day = "0" + day;
+    }
+    cout << date << "/" << month << "/" << day;
+    cout << ", ";
+
+    string hour = to_string(this->begin.hour);
+    string minute = to_string(this->begin.minute);
+    if(hour.length() == 1) {
+        hour = "0" + hour;
+    }
+    if(minute.length() == 1) {
+        minute = "0" + minute;
+    }
+    cout << hour << ":" << minute;
+    cout << ", ";
+
+    hour = to_string(this->end.hour);
+    minute = to_string(this->end.minute);
+    if(hour.length() == 1) {
+        hour = "0" + hour;
+    }
+    if(minute.length() == 1) {
+        minute = "0" + minute;
+    }
+    cout << hour << ":" << minute;
+    cout << ", " << aheadAlertMinutes << "." << endl;
+}
+
+class WholeDayEvent : public Event 
+{
+public:
+    WholeDayEvent(Date date, string name);
+    void modify(Date date , string name);
+    void print() const override; 
+    // some other things that you want to add
+};
+
+WholeDayEvent::WholeDayEvent(Date date, string name) : Event(date, {0, 0}, {23, 59}, name) {}
+void WholeDayEvent::modify(Date date, string name) {
+    Event::modify(date, {0, 0}, {23, 59}, name);
+}
+void WholeDayEvent::print() const {
+    cout << this->name;
+    cout << ": ";
+
+    string date = to_string(this->date.year);
+    string month = to_string(this->date.month);
+    string day = to_string(this->date.day);
+    if(month.length() == 1) {
+        month = "0" + month;
+    }
+    if(day.length() == 1) {
+        day = "0" + day;
+    }
+    cout << date << "/" << month << "/" << day;
+    cout << ", ";
+
+    cout << "whole day." << endl;
+}
+//------------------------------------------------------------------------
 class Calendar
 {
 private:
@@ -163,6 +264,15 @@ public:
     bool removeEvent(Date date , Time begin , string name);
     bool modifyEvent(Date date , Time begin , string name , Date newDate ,
     Time newBegin, Time newEnd , string newName);
+    
+    bool addAlertEvent(Date date , Time begin , Time end , string name , int aheadAlertMinutes);
+    bool removeAlertEvent(Date date , Time begin , string name);
+    bool modifyAlertEvent(Date date , Time begin , string name , Date newDate , Time newBegin , Time newEnd , string newName , int newAheadAlertMinutes);
+
+    bool addWholeDayEvent(Date date , string name);
+    bool removeWholeDayEvent(Date date , string name);
+    bool modifyWholeDayEvent(Date date , string name , Date newDate , string newName);
+
     void expandEventCnt(int newEventCnt);
 
     void printEvent(Date date , Time begin , string name) const;
@@ -317,6 +427,165 @@ bool Calendar::modifyEvent(Date date , Time begin , string name , Date newDate ,
     return false;
 }
 
+bool Calendar::addAlertEvent(Date date , Time begin , Time end , string name , int aheadAlertMinutes)
+{
+    if(eventCnt == eventCntMax)
+    {
+        return false;
+    }
+    Event* newEvent = new AlertEvent(date , begin , end , name , aheadAlertMinutes);
+    for(int i = 0; i < eventCnt; i++)
+    {
+        if(events[i]->isConflictWith(*newEvent))
+        {
+            delete newEvent;
+            return false;
+        }
+    }
+    events[eventCnt] = newEvent;
+    eventCnt++;
+    return true;
+}
+bool Calendar::removeAlertEvent(Date date , Time begin , string name)
+{
+    for(int i = 0; i < eventCnt; i++)
+    {
+        if(events[i]->date.year == date.year && events[i]->date.month == date.month && events[i]->date.day == date.day)
+        {
+            if(events[i]->begin.hour == begin.hour && events[i]->begin.minute == begin.minute)
+            {
+                if(events[i]->name == name)
+                {
+                    delete events[i];
+                    for(int j = i; j < eventCnt - 1; j++)
+                    {
+                        events[j] = events[j + 1];
+                    }
+                    eventCnt--;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+bool Calendar::modifyAlertEvent(Date date , Time begin , string name , Date newDate , Time newBegin , Time newEnd , string newName , int newAheadAlertMinutes)
+{
+    // Event* newEvent = new AlertEvent(newDate , newBegin , newEnd , newName , newAheadAlertMinutes);
+                
+    
+    for(int i = 0; i < eventCnt; i++)
+    {
+        if(events[i]->date.year == date.year && events[i]->date.month == date.month && events[i]->date.day == date.day)
+        {
+            if(events[i]->begin.hour == begin.hour && events[i]->begin.minute == begin.minute)
+            {
+                if(events[i]->name == name)
+                {
+                    //保留原數值
+                    Date originDate = events[i]->date;
+                    Time originBegin = events[i]->begin;
+                    Time originEnd = events[i]->end;
+                    string originName = events[i]->name;
+                    int originAheadAlertMinutes = dynamic_cast<AlertEvent*>(events[i])->getAheadAlertMinutes();
+
+                    //修改
+                    dynamic_cast<AlertEvent*>(events[i])->modify(newDate , newBegin , newEnd , newName, newAheadAlertMinutes); //待修改
+                    for(int j = 0; j < eventCnt; j++)
+                    {
+                        if(j == i)
+                        {
+                            continue;
+                        }
+                        if(events[j]->isConflictWith(*events[i]))
+                        {
+                            dynamic_cast<AlertEvent*>(events[i])->modify(originDate , originBegin , originEnd , originName, originAheadAlertMinutes); //待修改
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool Calendar::addWholeDayEvent(Date date , string name)
+{
+    if(eventCnt == eventCntMax)
+    {
+        return false;
+    }
+    Event* newEvent = new WholeDayEvent(date , name);
+    for(int i = 0; i < eventCnt; i++)
+    {
+        if(events[i]->isConflictWith(*newEvent))
+        {
+            delete newEvent;
+            return false;
+        }
+    }
+    events[eventCnt] = newEvent;
+    eventCnt++;
+    return true;
+}
+bool Calendar::removeWholeDayEvent(Date date , string name)
+{
+    for(int i = 0; i < eventCnt; i++)
+    {
+        if(events[i]->date.year == date.year && events[i]->date.month == date.month && events[i]->date.day == date.day)
+        {
+            if(events[i]->name == name)
+            {
+                delete events[i];
+                for(int j = i; j < eventCnt - 1; j++)
+                {
+                    events[j] = events[j + 1];
+                }
+                eventCnt--;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+bool Calendar::modifyWholeDayEvent(Date date , string name , Date newDate , string newName)
+{
+    // Event* newEvent = new WholeDayEvent(newDate , newName);
+                
+    
+    for(int i = 0; i < eventCnt; i++)
+    {
+        if(events[i]->date.year == date.year && events[i]->date.month == date.month && events[i]->date.day == date.day)
+        {
+            if(events[i]->name == name)
+            {
+                //保留原數值
+                Date originDate = events[i]->date;
+                string originName = events[i]->name;
+
+                //修改
+                dynamic_cast<WholeDayEvent*>(events[i])->modify(newDate , newName); //待修改
+                for(int j = 0; j < eventCnt; j++)
+                {
+                    if(j == i)
+                    {
+                        continue;
+                    }
+                    if(events[j]->isConflictWith(*events[i]))
+                    {
+                        dynamic_cast<WholeDayEvent*>(events[i])->modify(originDate , originName); //待修改
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void Calendar::expandEventCnt(int newEventCnt) {
         Event** newEvents = new Event*[newEventCnt];
         for (int i = 0; i < eventCnt; i++) {
@@ -370,54 +639,7 @@ void Calendar::setDefaultEventCntMax(int eventCntMax) {
     Calendar::eventCntMax = eventCntMax;
 }
 
-// hw10-3-----------------------------------------------------------------
-class AlertEvent : public Event 
-{
-private:
-    int aheadAlertMinutes;
-    // some other things that you want to add
-public:
-    AlertEvent(Date date, Time begin, Time end, string name, 
-               int aheadAlertMinutes);
-    int getAheadAlertMinutes() const; 
-    void modify(Date date, Time begin, Time end, string name, 
-                int aheadAlertMinutes);
-    void print() const;  
-    // some other things that you want to add
-};
 
-AlertEvent::AlertEvent(Date date, Time begin, Time end, string name, int aheadAlertMinutes)
-    : Event(date, begin, end, name), aheadAlertMinutes(aheadAlertMinutes) {}
-int AlertEvent::getAheadAlertMinutes() const {
-    return aheadAlertMinutes;
-}
-void AlertEvent::modify(Date date, Time begin, Time end, string name, int aheadAlertMinutes) {
-    Event::modify(date, begin, end, name);
-    this->aheadAlertMinutes = aheadAlertMinutes;
-}
-
-void AlertEvent::print() const {
-    Event::print();
-    cout << ", " << aheadAlertMinutes << "." << endl;
-}
-
-class WholeDayEvent : public Event 
-{
-public:
-    WholeDayEvent(Date date, string name);
-    void modify(Date date , string name);
-    void print() const; 
-    // some other things that you want to add
-};
-
-WholeDayEvent::WholeDayEvent(Date date, string name) : Event(date, {0, 0}, {23, 59}, name) {}
-void WholeDayEvent::modify(Date date, string name) {
-    Event::modify(date, {0, 0}, {23, 59}, name);
-}
-void WholeDayEvent::print() const {
-    Event::print(); //待修改 時間不要print出來
-    cout << ", whole day." << endl;
-}
 
 
 
@@ -712,6 +934,18 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
         }
 
         // add alert event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isAdd = calendars[i].addAlertEvent(date, begin, end, event_name, alert_minutes);
+                if(isAdd){
+                    return;
+                }
+                else{
+                    cerr << "Time conflict." << endl;
+                    return;
+                }
+            }
+        }
 
     }
     else if(tokens[0]=="RAE") // remove alert event
@@ -739,6 +973,14 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
         }
 
         // remove alert event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isRemove = calendars[i].removeAlertEvent(date, begin, event_name);
+                if(isRemove){
+                    return;
+                }
+            }
+        }
 
 
     }
@@ -780,6 +1022,14 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
         }
 
         // modify alert event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isModify = calendars[i].modifyAlertEvent(origin_date, origin_begin, origin_event_name, new_date, new_begin, new_end, new_event_name, new_ahead_alert_minutes);
+                if(isModify){
+                    return;
+                }
+            }
+        }
 
 
     }
@@ -806,6 +1056,18 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
         }
 
         // add whole day event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isAdd = calendars[i].addWholeDayEvent(date, event_name);
+                if(isAdd){
+                    return;
+                }
+                else{
+                    cerr << "Time conflict." << endl;
+                    return;
+                }
+            }
+        }
 
     }
     else if(tokens[0]=="RWE") // remove whole day event
@@ -831,6 +1093,14 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
         }
 
         // remove whole day event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isRemove = calendars[i].removeWholeDayEvent(date, event_name);
+                if(isRemove){
+                    return;
+                }
+            }
+        }
     }
     else if(tokens[0]=="MWE") // modify whole day event
     {
@@ -858,6 +1128,14 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
         }
 
         // modify whole day event
+        for(int i=0;i<user_cnt;i++){
+            if(calendars[i].getOwnerName() == owner_name){
+                bool isModify = calendars[i].modifyWholeDayEvent(origin_date, origin_event_name, new_date, new_event_name);
+                if(isModify){
+                    return;
+                }
+            }
+        }
 
     }
     
@@ -874,7 +1152,6 @@ void expandArray(Calendar*& calendars, int& capacity) {
     calendars = new_array;
     capacity = new_capacity;
 }
-
 
 Date strToDate(string date_str) {
     //格式: 2024/11/13
