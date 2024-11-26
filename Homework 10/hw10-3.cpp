@@ -220,7 +220,7 @@ public:
 
 WholeDayEvent::WholeDayEvent(Date date, string name) : Event(date, {0, 0}, {23, 59}, name) {}
 void WholeDayEvent::modify(Date date, string name) {
-    Event::modify(date, {0, 0}, {23, 59}, name);
+    Event::modify(date, {0, 0}, {24, 0}, name);
 }
 void WholeDayEvent::print() const {
     cout << this->name;
@@ -932,6 +932,10 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
             cerr << "Invalid time." << endl;
             return;
         }
+        if(alert_minutes < 0){
+            cerr << "Invalid number." << endl;
+            return;
+        }
 
         // add alert event
         for(int i=0;i<user_cnt;i++){
@@ -971,6 +975,7 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
             cerr << "User not found." << endl;
             return;
         }
+        
 
         // remove alert event
         for(int i=0;i<user_cnt;i++){
@@ -1020,7 +1025,11 @@ void classifyByType(string* tokens, Calendar* calendars, int user_cnt) {
             cerr << "Invalid time." << endl;
             return;
         }
-
+        if(new_ahead_alert_minutes < 0){
+            cerr << "Invalid number." << endl;
+            return;
+        }
+        
         // modify alert event
         for(int i=0;i<user_cnt;i++){
             if(calendars[i].getOwnerName() == owner_name){
