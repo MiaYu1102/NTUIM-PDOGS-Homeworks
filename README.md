@@ -5,6 +5,6 @@
 Judge連結: https://pdogs.ntu.im/
 
 ## 目錄
-hw1 ~ 6 <br>
-hw7 ~ 10 <br>
+#### Homework 1 ~ 6 <br>
+#### Homework 7 ~ 10 <br>
 prac <br>
