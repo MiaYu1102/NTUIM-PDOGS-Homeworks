@@ -1,4 +1,4 @@
-#include<bits/stdc++.h>  //待修改
+#include<bits/stdc++.h> 
 using std::string, std::cout, std::cin, std::endl, std::cerr, std::to_string, std::istringstream, std::noskipws, std::stoi;  
 
 // 全域變數
